@@ -66,7 +66,7 @@ const Login = () => {
       </Box>
       <Snackbar open={open} autoHideDuration={6000} onClose={handleClose}>
         <MuiAlert onClose={handleClose} sx={{ width: "100%" }}>
-          Login Done
+          Welcome
         </MuiAlert>
       </Snackbar>
     </Container>

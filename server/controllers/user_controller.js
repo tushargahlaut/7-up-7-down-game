@@ -4,7 +4,6 @@ const { roll_dice } = require("../utils/roll_dice");
 const login_user_controller = (req, res) => {
   try {
     const { name, points } = req.body;
-    console.log("REQUEST", req);
     if (!name || !points) {
       return res.status(400).json({
         success: false,
@@ -47,11 +46,11 @@ const roll_dice_controller = (req, res) => {
     let new_points = 0;
 
     if (
-      (option === "up" && dice_one + dice_two > 7) ||
-      (option === "down" && dice_one + dice_two < 7)
+      (option === "7 up" && dice_one + dice_two > 7) ||
+      (option === "7 down" && dice_one + dice_two < 7)
     ) {
       new_points = bet * 2;
-    } else if (option === "seven" && dice_one + dice_two === 7) {
+    } else if (option === "lucky 7" && dice_one + dice_two === 7) {
       new_points = bet * 5;
     } else {
       new_points = -bet;

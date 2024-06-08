@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { addPoints } from "../../redux/user_slice";
 import TextField from "@mui/material/TextField";
@@ -9,6 +9,12 @@ import Box from "@mui/material/Box";
 import MenuItem from "@mui/material/MenuItem";
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import ExtAxios from "../../utils/axios";
+import { useNavigate } from "react-router-dom";
 
 const betAmounts = [100, 200, 500];
 const betOptions = ["7 up", "7 down", "lucky 7"];
@@ -17,11 +23,22 @@ const Playground = () => {
   const name = useSelector((state) => state.user.name);
   const points = useSelector((state) => state.user.points);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const [betAmount, setBetAmount] = useState("");
   const [betOption, setBetOption] = useState("");
+  const [diceOne, setDiceOne] = useState(0);
+  const [diceTwo, setDiceTwo] = useState(0);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
+  const [isWin, setIsWin] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (points < 0) {
+      setModalOpen(true);
+    }
+  }, [points]);
 
   const handleBetAmountChange = (event) => {
     setBetAmount(event.target.value);
@@ -31,16 +48,28 @@ const Playground = () => {
     setBetOption(event.target.value);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!betAmount || !betOption) {
       setError("Please select both bet amount and bet option");
       setOpen(true);
       return;
     }
+    try {
+      const { data } = await ExtAxios.post("/api/v1/play", {
+        bet: betAmount,
+        option: betOption,
+      });
+      const { dice_one, dice_two, new_points, is_win } = data.data;
+      setDiceOne(dice_one);
+      setDiceTwo(dice_two);
+      setIsWin(is_win);
+      dispatch(addPoints(parseInt(new_points)));
+    } catch (error) {
+      setError("something went wrong");
+      setOpen(true);
+      return;
+    }
 
-    // This is where you would handle the bet logic
-    // For now, let's just add the bet amount to the points
-    dispatch(addPoints(-betAmount));
     setError("");
     setOpen(true);
   };
@@ -52,17 +81,20 @@ const Playground = () => {
     setOpen(false);
   };
 
+  const handleModalClose = () => {
+    setModalOpen(false);
+    sessionStorage.removeItem("accessToken");
+    navigate("/");
+  };
+
   return (
     <Container maxWidth="sm">
       <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          User Info
+        <Typography variant="h6" component="h4" gutterBottom>
+          Welcome {name}! Let's Play 🎰
         </Typography>
-        <Typography variant="h6" component="h2" gutterBottom>
-          Name: {name}
-        </Typography>
-        <Typography variant="h6" component="h2" gutterBottom>
-          Points: {points}
+        <Typography variant="h6" component="h4" gutterBottom>
+          Your Current Score is: {points}
         </Typography>
         <TextField
           select
@@ -95,16 +127,35 @@ const Playground = () => {
         <Button variant="contained" color="primary" onClick={handleSubmit}>
           Submit Bet
         </Button>
+        <Box display="flex" justifyContent="space-around" mt={2} width="100%">
+          <Typography variant="h6" component="div">
+            Dice One: {diceOne === 0 ? "?" : diceOne}
+          </Typography>
+          <Typography variant="h6" component="div">
+            Dice Two: {diceTwo === 0 ? "?" : diceTwo}
+          </Typography>
+        </Box>
       </Box>
       <Snackbar open={open} autoHideDuration={6000} onClose={handleClose}>
         <MuiAlert
           onClose={handleClose}
-          severity={error ? "error" : "success"}
+          severity={error ? "error" : isWin ? "success" : "error"}
           sx={{ width: "100%" }}
         >
-          {error || "Bet Submitted"}
+          {error || (isWin ? "Congratulations, you won!" : "Sorry, you lost!")}
         </MuiAlert>
       </Snackbar>
+      <Dialog open={modalOpen} onClose={handleModalClose}>
+        <DialogTitle>Game Over</DialogTitle>
+        <DialogContent>
+          <Typography>Your points are below 0. The game is over.</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleModalClose} color="primary">
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
